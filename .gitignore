@@ -1,0 +1,111 @@
+# =============================================
+# Java / Maven
+# =============================================
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+target/
+!**/src/main/**/target/
+!**/src/test/**/target/
+.mvn/wrapper/maven-wrapper.jar
+hs_err_pid*
+replay_pid*
+
+# =============================================
+# Spring Boot
+# =============================================
+application-local.properties
+application-local.yml
+application-*.properties
+!application.properties
+!application-dev.properties
+!application-test.properties
+!application-prod.properties
+
+# =============================================
+# Oracle / JDBC
+# =============================================
+wallet/
+*.wallet
+*.p12
+*.sso
+*.ora
+tnsnames.ora
+sqlnet.ora
+cwallet.sso
+ewallet.p12
+
+# =============================================
+# Angular / Node
+# =============================================
+node_modules/
+dist/
+.angular/
+.sass-cache/
+*.ngfactory.ts
+*.ngsummary.json
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+.npm
+
+# =============================================
+# Docker
+# =============================================
+.docker/
+docker-compose.override.yml
+docker-compose.local.yml
+
+# =============================================
+# Variables de entorno y secretos
+# =============================================
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+*.cert
+secrets/
+credentials/
+
+# =============================================
+# IDEs
+# =============================================
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+*.code-workspace
+.settings/
+.project
+.classpath
+.factorypath
+*.launch
+.springBeans
+.sts4-cache/
+
+# =============================================
+# OS
+# =============================================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# =============================================
+# Logs
+# =============================================
+logs/
+*.log
+log/
+
+# =============================================
+# JaCoCo / SonarQube
+# =============================================
+.sonar/
+.scannerwork/
+jacoco.exec
