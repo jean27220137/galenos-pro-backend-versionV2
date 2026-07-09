@@ -104,4 +104,14 @@ class StockControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isForbidden());
     }
+
+    @Test
+    @WithMockUser(authorities = "ALMACENERO")
+    void POST_registrarEntrada_400_body_invalido() throws Exception {
+        mockMvc.perform(post("/api/almacen/stock/entrada")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").exists());
+    }
 }

@@ -10,20 +10,23 @@ import com.galenospro.auth.repository.UsuarioRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Answers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.MockedConstruction;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.jdbc.core.simple.SimpleJdbcCall;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import javax.sql.DataSource;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
-import static org.mockito.Mockito.doNothing;
 
 @ExtendWith(MockitoExtension.class)
 class UsuarioServiceImplTest {
@@ -141,5 +144,107 @@ class UsuarioServiceImplTest {
 
         assertThatThrownBy(() -> spyService.registrar(dto))
                 .isInstanceOf(EmailDuplicadoException.class);
+    }
+
+    @Test
+    void registrar_usuario_no_encontrado_tras_insercion_lanza_excepcion() {
+        UsuarioServiceImpl spyService = spy(usuarioService);
+        doReturn(99L).when(spyService).llamarPrRegistrarUsuario(any(), any());
+        when(usuarioRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> spyService.registrar(new RegistrarUsuarioRequestDto()))
+                .isInstanceOf(UsuarioNotFoundException.class);
+    }
+
+    // ── llamarPrRegistrarUsuario — branches ───────────────────────────────────
+
+    private RegistrarUsuarioRequestDto buildRegistrarDto() {
+        RegistrarUsuarioRequestDto dto = new RegistrarUsuarioRequestDto();
+        dto.setNombres("Ana"); dto.setApellidos("Torres");
+        dto.setEmail("ana@bernales.gob.pe"); dto.setPassword("clave");
+        dto.setRol("JEFE_FARMACIA"); dto.setFarmaciaId(1L);
+        return dto;
+    }
+
+    @Test
+    void llamarPrRegistrarUsuario_exitoso_retorna_id() {
+        when(passwordEncoder.encode(any())).thenReturn("hashed");
+
+        try (MockedConstruction<SimpleJdbcCall> mocked = mockConstruction(
+                SimpleJdbcCall.class,
+                withSettings().defaultAnswer(Answers.RETURNS_SELF),
+                (mock, ctx) -> doReturn(Map.of("p_id", 42L)).when(mock).execute(any(Map.class)))) {
+            Long result = usuarioService.llamarPrRegistrarUsuario(dataSource, buildRegistrarDto());
+            assertThat(result).isEqualTo(42L);
+        }
+    }
+
+    @Test
+    void llamarPrRegistrarUsuario_ORA20002_lanza_EmailDuplicadoException() {
+        when(passwordEncoder.encode(any())).thenReturn("hashed");
+
+        try (MockedConstruction<SimpleJdbcCall> mocked = mockConstruction(
+                SimpleJdbcCall.class,
+                withSettings().defaultAnswer(Answers.RETURNS_SELF),
+                (mock, ctx) -> doThrow(new RuntimeException("ORA-20002: email duplicado"))
+                        .when(mock).execute(any(Map.class)))) {
+            assertThatThrownBy(() ->
+                    usuarioService.llamarPrRegistrarUsuario(dataSource, buildRegistrarDto()))
+                    .isInstanceOf(EmailDuplicadoException.class);
+        }
+    }
+
+    @Test
+    void llamarPrRegistrarUsuario_excepcion_generica_se_propaga() {
+        when(passwordEncoder.encode(any())).thenReturn("hashed");
+
+        try (MockedConstruction<SimpleJdbcCall> mocked = mockConstruction(
+                SimpleJdbcCall.class,
+                withSettings().defaultAnswer(Answers.RETURNS_SELF),
+                (mock, ctx) -> doThrow(new RuntimeException("DB timeout"))
+                        .when(mock).execute(any(Map.class)))) {
+            assertThatThrownBy(() ->
+                    usuarioService.llamarPrRegistrarUsuario(dataSource, buildRegistrarDto()))
+                    .isInstanceOf(RuntimeException.class)
+                    .hasMessageContaining("DB timeout");
+        }
+    }
+
+    // ── llamarPrDesactivarUsuario — branches ──────────────────────────────────
+
+    @Test
+    void llamarPrDesactivarUsuario_exitoso_no_lanza_excepcion() {
+        try (MockedConstruction<SimpleJdbcCall> mocked = mockConstruction(
+                SimpleJdbcCall.class,
+                withSettings().defaultAnswer(Answers.RETURNS_SELF))) {
+            usuarioService.llamarPrDesactivarUsuario(dataSource, 1L);
+        }
+    }
+
+    @Test
+    void llamarPrDesactivarUsuario_ORA20003_lanza_UsuarioNotFoundException() {
+        try (MockedConstruction<SimpleJdbcCall> mocked = mockConstruction(
+                SimpleJdbcCall.class,
+                withSettings().defaultAnswer(Answers.RETURNS_SELF),
+                (mock, ctx) -> doThrow(new RuntimeException("ORA-20003: usuario no existe"))
+                        .when(mock).execute(any(Map.class)))) {
+            assertThatThrownBy(() ->
+                    usuarioService.llamarPrDesactivarUsuario(dataSource, 99L))
+                    .isInstanceOf(UsuarioNotFoundException.class);
+        }
+    }
+
+    @Test
+    void llamarPrDesactivarUsuario_excepcion_generica_se_propaga() {
+        try (MockedConstruction<SimpleJdbcCall> mocked = mockConstruction(
+                SimpleJdbcCall.class,
+                withSettings().defaultAnswer(Answers.RETURNS_SELF),
+                (mock, ctx) -> doThrow(new RuntimeException("Connection reset"))
+                        .when(mock).execute(any(Map.class)))) {
+            assertThatThrownBy(() ->
+                    usuarioService.llamarPrDesactivarUsuario(dataSource, 1L))
+                    .isInstanceOf(RuntimeException.class)
+                    .hasMessageContaining("Connection reset");
+        }
     }
 }

@@ -10,11 +10,14 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.jdbc.core.SqlOutParameter;
+import org.springframework.jdbc.core.SqlParameter;
 import org.springframework.jdbc.core.simple.SimpleJdbcCall;
 import org.springframework.stereotype.Service;
 
 import javax.sql.DataSource;
 import java.sql.Date;
+import java.sql.Types;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -67,7 +70,17 @@ public class StockServiceImpl implements StockService {
         SimpleJdbcCall call = new SimpleJdbcCall(ds)
                 .withSchemaName("GP_ALMACEN")
                 .withCatalogName("PKG_STOCK")
-                .withProcedureName("PR_REGISTRAR_ENTRADA");
+                .withProcedureName("PR_REGISTRAR_ENTRADA")
+                .withoutProcedureColumnMetaDataAccess()
+                .declareParameters(
+                    new SqlParameter("p_medicamento_id",  Types.NUMERIC),
+                    new SqlParameter("p_almacen_id",      Types.NUMERIC),
+                    new SqlParameter("p_lote",            Types.VARCHAR),
+                    new SqlParameter("p_cantidad",        Types.NUMERIC),
+                    new SqlParameter("p_fecha_vto",       Types.DATE),
+                    new SqlParameter("p_precio_unitario", Types.NUMERIC),
+                    new SqlOutParameter("p_id",           Types.NUMERIC)
+                );
         Map<String, Object> result = call.execute(Map.of(
                 "p_medicamento_id",  dto.getMedicamentoId(),
                 "p_almacen_id",      dto.getAlmacenId(),

@@ -97,4 +97,13 @@ class MedicamentoServiceImplTest {
 
         assertThat(result).isEmpty();
     }
+
+    @Test
+    void buscarPorId_medicamento_inactivo_lanza_excepcion() {
+        medicamento.setActivo(0);
+        when(medicamentoRepository.findById(1L)).thenReturn(Optional.of(medicamento));
+
+        assertThatThrownBy(() -> medicamentoService.buscarPorId(1L))
+                .isInstanceOf(MedicamentoNotFoundException.class);
+    }
 }

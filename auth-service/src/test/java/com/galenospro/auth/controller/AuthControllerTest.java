@@ -5,6 +5,7 @@ import com.galenospro.auth.dto.LoginRequestDto;
 import com.galenospro.auth.dto.LoginResponseDto;
 import com.galenospro.auth.dto.ValidateTokenResponseDto;
 import com.galenospro.auth.exception.CredencialesInvalidasException;
+import com.galenospro.auth.exception.UsuarioInactivoException;
 import com.galenospro.auth.config.SecurityConfig;
 import com.galenospro.auth.exception.GlobalExceptionHandler;
 import com.galenospro.auth.service.AuthService;
@@ -95,5 +96,30 @@ class AuthControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.rol").value("FARMACEUTICO"))
                 .andExpect(jsonPath("$.userId").value(1));
+    }
+
+    @Test
+    void POST_login_400_body_invalido() throws Exception {
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").exists());
+    }
+
+    @Test
+    void POST_login_401_usuario_inactivo() throws Exception {
+        LoginRequestDto request = new LoginRequestDto();
+        request.setEmail("inactivo@bernales.gob.pe");
+        request.setPassword("clave123");
+
+        when(authService.login(any(LoginRequestDto.class)))
+                .thenThrow(new UsuarioInactivoException());
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error").value("Usuario inactivo"));
     }
 }

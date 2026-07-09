@@ -10,17 +10,22 @@ import com.galenospro.almacen.repository.StockRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Answers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.MockedConstruction;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.jdbc.core.simple.SimpleJdbcCall;
 
 import javax.sql.DataSource;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
@@ -133,5 +138,27 @@ class StockServiceImplTest {
 
         assertThat(result.getNombreMedicamento()).isEqualTo("Paracetamol 500mg");
         assertThat(result.getCodigoSismed()).isEqualTo("SISMED-001");
+    }
+
+    @Test
+    void registrarEntrada_stock_no_encontrado_tras_insercion_lanza_excepcion() {
+        StockServiceImpl spyService = spy(stockService);
+        doReturn(999L).when(spyService).llamarPrRegistrarEntrada(any(), any());
+        when(stockRepository.findById(999L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> spyService.registrarEntrada(entradaDto))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("Error al recuperar stock");
+    }
+
+    @Test
+    void llamarPrRegistrarEntrada_retorna_id_del_stock_creado() {
+        try (MockedConstruction<SimpleJdbcCall> mocked = mockConstruction(
+                SimpleJdbcCall.class,
+                withSettings().defaultAnswer(Answers.RETURNS_SELF),
+                (mock, ctx) -> doReturn(Map.of("p_id", 42L)).when(mock).execute(any(Map.class)))) {
+            Long result = stockService.llamarPrRegistrarEntrada(dataSource, entradaDto);
+            assertThat(result).isEqualTo(42L);
+        }
     }
 }

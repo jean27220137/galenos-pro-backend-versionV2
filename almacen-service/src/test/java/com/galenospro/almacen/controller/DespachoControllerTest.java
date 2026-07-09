@@ -5,6 +5,8 @@ import com.galenospro.almacen.config.SecurityConfig;
 import com.galenospro.almacen.dto.DespachoSolicitudDto;
 import com.galenospro.almacen.dto.NotaSalidaResponseDto;
 import com.galenospro.almacen.exception.GlobalExceptionHandler;
+import com.galenospro.almacen.exception.NotaSalidaNotFoundException;
+import com.galenospro.almacen.exception.StockInsuficienteException;
 import com.galenospro.almacen.messaging.AlmacenPublisher;
 import com.galenospro.almacen.service.NotaSalidaService;
 import org.junit.jupiter.api.Test;
@@ -72,5 +74,47 @@ class DespachoControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(buildDto())))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(authorities = "ALMACENERO")
+    void POST_despachar_404_nota_no_encontrada() throws Exception {
+        when(notaSalidaService.despacharSolicitud(any()))
+                .thenThrow(new NotaSalidaNotFoundException(1L));
+
+        mockMvc.perform(post("/api/almacen/despacho")
+                        .header("X-User-Id", "10")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(buildDto())))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").exists());
+    }
+
+    @Test
+    @WithMockUser(authorities = "ALMACENERO")
+    void POST_despachar_409_stock_insuficiente() throws Exception {
+        when(notaSalidaService.despacharSolicitud(any()))
+                .thenThrow(new StockInsuficienteException(10L));
+
+        mockMvc.perform(post("/api/almacen/despacho")
+                        .header("X-User-Id", "10")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(buildDto())))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error").exists());
+    }
+
+    @Test
+    @WithMockUser(authorities = "ALMACENERO")
+    void POST_despachar_500_error_generico() throws Exception {
+        when(notaSalidaService.despacharSolicitud(any()))
+                .thenThrow(new RuntimeException("DB error inesperado"));
+
+        mockMvc.perform(post("/api/almacen/despacho")
+                        .header("X-User-Id", "10")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(buildDto())))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.error").value("Error interno del servidor"));
     }
 }

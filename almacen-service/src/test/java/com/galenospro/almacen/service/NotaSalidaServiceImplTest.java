@@ -1,5 +1,6 @@
 package com.galenospro.almacen.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.galenospro.almacen.dto.DespachoSolicitudDto;
 import com.galenospro.almacen.dto.NotaSalidaResponseDto;
@@ -10,9 +11,12 @@ import com.galenospro.almacen.repository.NotaSalidaRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Answers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.MockedConstruction;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.jdbc.core.simple.SimpleJdbcCall;
 
 import javax.sql.DataSource;
 import java.util.List;
@@ -107,5 +111,81 @@ class NotaSalidaServiceImplTest {
         spyService.confirmarEntrega(1L);
 
         verify(spyService).llamarPrConfirmarEntrega(dataSource, 1L);
+    }
+
+    // ── llamarPrDespacharSolicitud — branches de error ────────────────────────
+
+    @Test
+    void llamarPrDespacharSolicitud_ORA20010_lanza_NotaSalidaNotFoundException()
+            throws JsonProcessingException {
+        when(objectMapper.writeValueAsString(any())).thenReturn("[]");
+
+        try (MockedConstruction<SimpleJdbcCall> mocked = mockConstruction(
+                SimpleJdbcCall.class,
+                withSettings().defaultAnswer(Answers.RETURNS_SELF),
+                (mock, ctx) -> doThrow(new RuntimeException("ORA-20010: solicitud no valida"))
+                        .when(mock).execute(any(Map.class)))) {
+            assertThatThrownBy(() ->
+                    notaSalidaService.llamarPrDespacharSolicitud(dataSource, despachoDto))
+                    .isInstanceOf(NotaSalidaNotFoundException.class);
+        }
+    }
+
+    @Test
+    void llamarPrDespacharSolicitud_excepcion_generica_se_propaga()
+            throws JsonProcessingException {
+        when(objectMapper.writeValueAsString(any())).thenReturn("[]");
+
+        try (MockedConstruction<SimpleJdbcCall> mocked = mockConstruction(
+                SimpleJdbcCall.class,
+                withSettings().defaultAnswer(Answers.RETURNS_SELF),
+                (mock, ctx) -> doThrow(new RuntimeException("DB connection error"))
+                        .when(mock).execute(any(Map.class)))) {
+            assertThatThrownBy(() ->
+                    notaSalidaService.llamarPrDespacharSolicitud(dataSource, despachoDto))
+                    .isInstanceOf(RuntimeException.class)
+                    .hasMessageContaining("DB connection error");
+        }
+    }
+
+    @Test
+    void llamarPrDespacharSolicitud_JsonProcessingException_lanza_RuntimeException()
+            throws JsonProcessingException {
+        when(objectMapper.writeValueAsString(any()))
+                .thenThrow(new JsonProcessingException("parse error") {});
+
+        assertThatThrownBy(() ->
+                notaSalidaService.llamarPrDespacharSolicitud(dataSource, despachoDto))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("Error serializando");
+    }
+
+    // ── llamarPrConfirmarEntrega — branches de error ──────────────────────────
+
+    @Test
+    void llamarPrConfirmarEntrega_ORA20011_lanza_NotaSalidaNotFoundException() {
+        try (MockedConstruction<SimpleJdbcCall> mocked = mockConstruction(
+                SimpleJdbcCall.class,
+                withSettings().defaultAnswer(Answers.RETURNS_SELF),
+                (mock, ctx) -> doThrow(new RuntimeException("ORA-20011: nota ya entregada"))
+                        .when(mock).execute(any(Map.class)))) {
+            assertThatThrownBy(() ->
+                    notaSalidaService.llamarPrConfirmarEntrega(dataSource, 1L))
+                    .isInstanceOf(NotaSalidaNotFoundException.class);
+        }
+    }
+
+    @Test
+    void llamarPrConfirmarEntrega_excepcion_generica_se_propaga() {
+        try (MockedConstruction<SimpleJdbcCall> mocked = mockConstruction(
+                SimpleJdbcCall.class,
+                withSettings().defaultAnswer(Answers.RETURNS_SELF),
+                (mock, ctx) -> doThrow(new RuntimeException("Timeout error"))
+                        .when(mock).execute(any(Map.class)))) {
+            assertThatThrownBy(() ->
+                    notaSalidaService.llamarPrConfirmarEntrega(dataSource, 1L))
+                    .isInstanceOf(RuntimeException.class)
+                    .hasMessageContaining("Timeout error");
+        }
     }
 }

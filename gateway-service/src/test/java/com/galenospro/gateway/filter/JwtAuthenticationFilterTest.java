@@ -71,8 +71,9 @@ class JwtAuthenticationFilterTest {
     }
 
     @Test
-    void deberia_inyectar_headers_con_token_valido() {
+    void deberia_inyectar_headers_con_token_valido_sin_farmacia() {
         Claims claims = mock(Claims.class);
+        when(claims.get("farmaciaId", Long.class)).thenReturn(null);
         when(claims.get("userId", Long.class)).thenReturn(1L);
         when(claims.get("rol", String.class)).thenReturn("FARMACEUTICO");
         when(jwtValidator.validarToken("token-ok")).thenReturn(claims);
@@ -80,6 +81,28 @@ class JwtAuthenticationFilterTest {
         MockServerHttpRequest request = MockServerHttpRequest
                 .get("/api/farmacia/solicitudes")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer token-ok")
+                .build();
+        MockServerWebExchange exchange = MockServerWebExchange.from(request);
+
+        StepVerifier.create(filter.filter(exchange, chain))
+                .verifyComplete();
+
+        assertThat(exchange.getResponse().getStatusCode())
+                .isNotEqualTo(HttpStatus.UNAUTHORIZED);
+        verify(chain).filter(any());
+    }
+
+    @Test
+    void deberia_inyectar_headers_con_token_valido_con_farmacia() {
+        Claims claims = mock(Claims.class);
+        when(claims.get("farmaciaId", Long.class)).thenReturn(3L);
+        when(claims.get("userId", Long.class)).thenReturn(1L);
+        when(claims.get("rol", String.class)).thenReturn("ALMACENERO");
+        when(jwtValidator.validarToken("token-ok-almacen")).thenReturn(claims);
+
+        MockServerHttpRequest request = MockServerHttpRequest
+                .get("/api/almacen/stock")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer token-ok-almacen")
                 .build();
         MockServerWebExchange exchange = MockServerWebExchange.from(request);
 

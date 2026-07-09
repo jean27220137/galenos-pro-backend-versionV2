@@ -40,7 +40,7 @@ public class NotaSalidaController {
     @ApiResponse(responseCode = "204", description = "Entrega confirmada")
     @ApiResponse(responseCode = "404", description = "Nota no encontrada")
     @PutMapping("/{id}/entregar")
-    @PreAuthorize("hasAnyAuthority('ADMIN','ALMACENERO')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','ALMACENERO','JEFE_FARMACIA','FARMACEUTICO')")
     public ResponseEntity<Void> confirmarEntrega(@PathVariable Long id) {
         notaSalidaService.confirmarEntrega(id);
         return ResponseEntity.noContent().build();

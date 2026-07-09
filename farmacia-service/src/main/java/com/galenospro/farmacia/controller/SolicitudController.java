@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
 
 @Tag(name = "Solicitudes", description = "Gestión de solicitudes de requerimiento de medicamentos")
 @RestController
@@ -30,9 +31,20 @@ public class SolicitudController {
     @PreAuthorize("hasAnyAuthority('JEFE_FARMACIA','FARMACEUTICO')")
     public ResponseEntity<SolicitudResponseDto> crear(
             @Valid @RequestBody SolicitudRequestDto dto,
-            @RequestHeader("X-User-Id") Long farmaceuticoId) {
+            @RequestHeader("X-User-Id") Long farmaceuticoId,
+            @RequestHeader(value = "X-Farmacia-Id", required = false) Long farmaciaIdHeader) {
+        if (dto.getFarmaciaId() == null && farmaciaIdHeader != null) {
+            dto.setFarmaciaId(farmaciaIdHeader);
+        }
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(solicitudService.crear(dto, farmaceuticoId));
+    }
+
+    @Operation(summary = "Listar solicitudes activas (PENDIENTE + APROBADO_JEFE + EN_PROCESO)")
+    @ApiResponse(responseCode = "200", description = "Solicitudes activas")
+    @GetMapping("/activas")
+    public ResponseEntity<List<SolicitudResponseDto>> listarActivas() {
+        return ResponseEntity.ok(solicitudService.listarActivas());
     }
 
     @Operation(summary = "Listar solicitudes (por farmacia o por estado)")
@@ -66,6 +78,17 @@ public class SolicitudController {
         return ResponseEntity.ok(Map.of("estado", solicitudService.consultarEstado(id)));
     }
 
+    @Operation(summary = "Jefe de farmacia aprueba la solicitud → APROBADO_JEFE")
+    @ApiResponse(responseCode = "204", description = "Solicitud aprobada")
+    @ApiResponse(responseCode = "404", description = "Solicitud no encontrada")
+    @ApiResponse(responseCode = "409", description = "La solicitud no está en estado PENDIENTE")
+    @PutMapping("/{id}/aprobar")
+    @PreAuthorize("hasAnyAuthority('JEFE_FARMACIA','ADMIN')")
+    public ResponseEntity<Void> aprobar(@PathVariable Long id) {
+        solicitudService.aprobar(id);
+        return ResponseEntity.noContent().build();
+    }
+
     @Operation(summary = "Almacenero toma la solicitud → EN_PROCESO")
     @ApiResponse(responseCode = "204", description = "Solicitud marcada EN_PROCESO")
     @ApiResponse(responseCode = "404", description = "Solicitud no encontrada")
@@ -74,6 +97,29 @@ public class SolicitudController {
     @PreAuthorize("hasAnyAuthority('ALMACENERO','ADMIN')")
     public ResponseEntity<Void> marcarEnProceso(@PathVariable Long id) {
         solicitudService.marcarEnProceso(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "Farmacia confirma recepción de medicamentos → ENTREGADA")
+    @ApiResponse(responseCode = "204", description = "Entrega confirmada")
+    @ApiResponse(responseCode = "404", description = "Solicitud no encontrada")
+    @ApiResponse(responseCode = "409", description = "La solicitud no está en estado DESPACHADA")
+    @PutMapping("/{id}/entregar")
+    @PreAuthorize("hasAnyAuthority('JEFE_FARMACIA','FARMACEUTICO','ALMACENERO','ADMIN')")
+    public ResponseEntity<Void> confirmarEntrega(@PathVariable Long id) {
+        solicitudService.confirmarEntrega(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "Farmacia rechaza la entrega → RECHAZADA")
+    @ApiResponse(responseCode = "204", description = "Solicitud rechazada")
+    @ApiResponse(responseCode = "404", description = "Solicitud no encontrada")
+    @ApiResponse(responseCode = "409", description = "La solicitud no está en estado DESPACHADA")
+    @PutMapping("/{id}/rechazar")
+    @PreAuthorize("hasAnyAuthority('JEFE_FARMACIA','FARMACEUTICO','ADMIN')")
+    public ResponseEntity<Void> rechazar(@PathVariable Long id,
+                                         @RequestBody Map<String, String> body) {
+        solicitudService.rechazar(id, body.get("motivo"));
         return ResponseEntity.noContent().build();
     }
 

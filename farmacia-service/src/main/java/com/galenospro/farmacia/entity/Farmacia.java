@@ -21,11 +21,26 @@ public class Farmacia {
     @Column(name = "NOMBRE", nullable = false, length = 200)
     private String nombre;
 
+    @Column(name = "TIPO", length = 50)
+    private String tipo;
+
     @Column(name = "AREA", length = 100)
     private String area;
 
-    @Column(name = "TIPO", length = 50)
-    private String tipo;
+    @Column(name = "UBICACION", length = 200)
+    private String ubicacion;
+
+    @Column(name = "DEPARTAMENTO", length = 100)
+    private String departamento;
+
+    @Column(name = "JEFE_ID")
+    private Long jefeId;
+
+    @Column(name = "JEFE_NOMBRE", length = 200)
+    private String jefeNombre;
+
+    @Column(name = "TELEFONO", length = 15)
+    private String telefono;
 
     @Column(name = "ACTIVO", nullable = false)
     private Integer activo;

@@ -9,10 +9,13 @@ import com.galenospro.almacen.mapper.NotaSalidaMapper;
 import com.galenospro.almacen.repository.NotaSalidaRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.jdbc.core.SqlOutParameter;
+import org.springframework.jdbc.core.SqlParameter;
 import org.springframework.jdbc.core.simple.SimpleJdbcCall;
 import org.springframework.stereotype.Service;
 
 import javax.sql.DataSource;
+import java.sql.Types;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -66,7 +69,18 @@ public class NotaSalidaServiceImpl implements NotaSalidaService {
         SimpleJdbcCall call = new SimpleJdbcCall(ds)
                 .withSchemaName("GP_ALMACEN")
                 .withCatalogName("PKG_STOCK")
-                .withProcedureName("PR_DESPACHAR_SOLICITUD");
+                .withProcedureName("PR_DESPACHAR_SOLICITUD")
+                .withoutProcedureColumnMetaDataAccess()
+                .declareParameters(
+                    new SqlParameter("p_solicitud_id",    Types.NUMERIC),
+                    new SqlParameter("p_almacen_id",      Types.NUMERIC),
+                    new SqlParameter("p_almacen_destino", Types.NUMERIC),
+                    new SqlParameter("p_despachado_por",  Types.NUMERIC),
+                    new SqlParameter("p_detalles_json",   Types.CLOB),
+                    new SqlOutParameter("p_nota_id",       Types.NUMERIC),
+                    new SqlOutParameter("p_nro_nota",      Types.VARCHAR),
+                    new SqlOutParameter("p_nro_movimiento", Types.VARCHAR)
+                );
 
         Map<String, Object> params = new HashMap<>();
         params.put("p_solicitud_id",    dto.getSolicitudId());
@@ -89,7 +103,11 @@ public class NotaSalidaServiceImpl implements NotaSalidaService {
         SimpleJdbcCall call = new SimpleJdbcCall(ds)
                 .withSchemaName("GP_ALMACEN")
                 .withCatalogName("PKG_STOCK")
-                .withProcedureName("PR_CONFIRMAR_ENTREGA");
+                .withProcedureName("PR_CONFIRMAR_ENTREGA")
+                .withoutProcedureColumnMetaDataAccess()
+                .declareParameters(
+                    new SqlParameter("p_nota_id", Types.NUMERIC)
+                );
         try {
             call.execute(Map.of("p_nota_id", notaId));
         } catch (Exception ex) {

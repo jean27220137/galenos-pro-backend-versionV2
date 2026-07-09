@@ -12,10 +12,13 @@ import com.galenospro.farmacia.messaging.FarmaciaPublisher;
 import com.galenospro.farmacia.repository.SolicitudRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.jdbc.core.SqlOutParameter;
+import org.springframework.jdbc.core.SqlParameter;
 import org.springframework.jdbc.core.simple.SimpleJdbcCall;
 import org.springframework.stereotype.Service;
 
 import javax.sql.DataSource;
+import java.sql.Types;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -33,6 +36,9 @@ public class SolicitudServiceImpl implements SolicitudService {
 
     @Override
     public SolicitudResponseDto crear(SolicitudRequestDto dto, Long farmaceuticoId) {
+        if (dto.getFarmaciaId() == null) {
+            throw new EstadoInvalidoException("El usuario no tiene farmacia asignada. Contacte al administrador.");
+        }
         Map<String, Object> resultado = llamarPrCrearSolicitud(dataSource, dto, farmaceuticoId);
         Long solicitudId = ((Number) resultado.get("p_solicitud_id")).longValue();
         log.info("Solicitud creada: nro={} farmacia={}", resultado.get("p_nro_solicitud"), dto.getFarmaciaId());
@@ -72,11 +78,26 @@ public class SolicitudServiceImpl implements SolicitudService {
         solicitudRepository.findById(id)
                 .orElseThrow(() -> new SolicitudNotFoundException(id));
         try {
-            llamarPrActualizarEstado(dataSource, id, "EN_PROCESO", null, "Tomada por almacenero");
+            llamarPrActualizarEstado(dataSource, id, "EN_PROCESO", null, "En preparación por almacenero");
             log.info("Solicitud id={} marcada EN_PROCESO", id);
         } catch (Exception ex) {
             if (ex.getMessage() != null && ex.getMessage().contains("ORA-20024")) {
-                throw new EstadoInvalidoException("Solo se puede tomar una solicitud en estado PENDIENTE");
+                throw new EstadoInvalidoException("La solicitud no puede marcarse EN_PROCESO en su estado actual");
+            }
+            throw ex;
+        }
+    }
+
+    @Override
+    public void aprobar(Long id) {
+        solicitudRepository.findById(id)
+                .orElseThrow(() -> new SolicitudNotFoundException(id));
+        try {
+            llamarPrActualizarEstado(dataSource, id, "APROBADO_JEFE", null, "Aprobado por jefe de farmacia");
+            log.info("Solicitud id={} aprobada por jefe", id);
+        } catch (Exception ex) {
+            if (ex.getMessage() != null && ex.getMessage().contains("ORA-20024")) {
+                throw new EstadoInvalidoException("Solo se puede aprobar una solicitud en estado PENDIENTE");
             }
             throw ex;
         }
@@ -92,6 +113,44 @@ public class SolicitudServiceImpl implements SolicitudService {
         } catch (Exception ex) {
             if (ex.getMessage() != null && ex.getMessage().contains("ORA-20024")) {
                 throw new EstadoInvalidoException("Solo se puede cancelar una solicitud en estado PENDIENTE");
+            }
+            throw ex;
+        }
+    }
+
+    @Override
+    public List<SolicitudResponseDto> listarActivas() {
+        return solicitudMapper.toDtoList(
+                solicitudRepository.findByEstadoIn(
+                        List.of("APROBADO_JEFE", "EN_PROCESO", "PENDIENTE")));
+    }
+
+    @Override
+    public void rechazar(Long id, String motivo) {
+        solicitudRepository.findById(id)
+                .orElseThrow(() -> new SolicitudNotFoundException(id));
+        try {
+            llamarPrActualizarEstado(dataSource, id, "RECHAZADA", null,
+                    motivo != null ? motivo : "Rechazado por farmacia");
+            log.info("Solicitud id={} rechazada. Motivo: {}", id, motivo);
+        } catch (Exception ex) {
+            if (ex.getMessage() != null && ex.getMessage().contains("ORA-20024")) {
+                throw new EstadoInvalidoException("Solo se puede rechazar una solicitud en estado DESPACHADA");
+            }
+            throw ex;
+        }
+    }
+
+    @Override
+    public void confirmarEntrega(Long id) {
+        solicitudRepository.findById(id)
+                .orElseThrow(() -> new SolicitudNotFoundException(id));
+        try {
+            llamarPrActualizarEstado(dataSource, id, "ENTREGADA", null, "Recepción confirmada por farmacia");
+            log.info("Solicitud id={} marcada ENTREGADA", id);
+        } catch (Exception ex) {
+            if (ex.getMessage() != null && ex.getMessage().contains("ORA-20024")) {
+                throw new EstadoInvalidoException("Solo se puede confirmar entrega de una solicitud DESPACHADA");
             }
             throw ex;
         }
@@ -137,7 +196,16 @@ public class SolicitudServiceImpl implements SolicitudService {
         SimpleJdbcCall call = new SimpleJdbcCall(ds)
                 .withSchemaName("GP_FARMACIA")
                 .withCatalogName("PKG_REQUERIMIENTO")
-                .withProcedureName("PR_CREAR_SOLICITUD");
+                .withProcedureName("PR_CREAR_SOLICITUD")
+                .withoutProcedureColumnMetaDataAccess()
+                .declareParameters(
+                    new SqlParameter("p_farmacia_id",     Types.NUMERIC),
+                    new SqlParameter("p_almacen_id",      Types.NUMERIC),
+                    new SqlParameter("p_farmaceutico_id", Types.NUMERIC),
+                    new SqlParameter("p_detalles_json",   Types.CLOB),
+                    new SqlOutParameter("p_solicitud_id", Types.NUMERIC),
+                    new SqlOutParameter("p_nro_solicitud", Types.VARCHAR)
+                );
 
         Map<String, Object> params = new HashMap<>();
         params.put("p_farmacia_id",     dto.getFarmaciaId());
@@ -165,7 +233,14 @@ public class SolicitudServiceImpl implements SolicitudService {
         SimpleJdbcCall call = new SimpleJdbcCall(ds)
                 .withSchemaName("GP_FARMACIA")
                 .withCatalogName("PKG_REQUERIMIENTO")
-                .withProcedureName("PR_ACTUALIZAR_ESTADO");
+                .withProcedureName("PR_ACTUALIZAR_ESTADO")
+                .withoutProcedureColumnMetaDataAccess()
+                .declareParameters(
+                    new SqlParameter("p_solicitud_id",   Types.NUMERIC),
+                    new SqlParameter("p_nuevo_estado",   Types.VARCHAR),
+                    new SqlParameter("p_nota_salida_id", Types.NUMERIC),
+                    new SqlParameter("p_observacion",    Types.VARCHAR)
+                );
 
         Map<String, Object> params = new HashMap<>();
         params.put("p_solicitud_id",   solicitudId);

@@ -12,7 +12,11 @@ public interface SolicitudService {
     List<SolicitudResponseDto> listarPorEstado(String estado);
     SolicitudResponseDto buscarPorId(Long id);
     String consultarEstado(Long id);
+    void aprobar(Long id);
     void cancelar(Long id);
     void marcarEnProceso(Long id);
+    void confirmarEntrega(Long id);
+    void rechazar(Long id, String motivo);
+    List<SolicitudResponseDto> listarActivas();
     void procesarDespachoConfirmado(Map<String, Object> payload);
 }

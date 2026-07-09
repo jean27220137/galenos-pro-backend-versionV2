@@ -43,10 +43,14 @@ public class JwtAuthenticationFilter implements GatewayFilter {
         try {
             Claims claims = jwtValidator.validarToken(token);
 
-            ServerHttpRequest requestConHeaders = exchange.getRequest().mutate()
+            Long farmaciaId = claims.get("farmaciaId", Long.class);
+            ServerHttpRequest.Builder builder = exchange.getRequest().mutate()
                     .header("X-User-Id",  claims.get("userId", Long.class).toString())
-                    .header("X-User-Rol", claims.get("rol", String.class))
-                    .build();
+                    .header("X-User-Rol", claims.get("rol", String.class));
+            if (farmaciaId != null) {
+                builder.header("X-Farmacia-Id", farmaciaId.toString());
+            }
+            ServerHttpRequest requestConHeaders = builder.build();
 
             log.info("JWT válido — userId={} rol={}",
                     claims.get("userId"), claims.get("rol"));

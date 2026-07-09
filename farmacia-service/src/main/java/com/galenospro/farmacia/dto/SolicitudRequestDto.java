@@ -9,7 +9,7 @@ import java.util.List;
 
 @Data
 public class SolicitudRequestDto {
-    @NotNull private Long farmaciaId;
+    private Long farmaciaId;
     @NotNull private Long almacenId;
     @NotEmpty @Valid private List<DetalleRequestDto> detalles;
 }
