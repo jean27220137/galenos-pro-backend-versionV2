@@ -15,7 +15,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
-import java.util.HashMap;
 
 @Tag(name = "Solicitudes", description = "Gestión de solicitudes de requerimiento de medicamentos")
 @RestController

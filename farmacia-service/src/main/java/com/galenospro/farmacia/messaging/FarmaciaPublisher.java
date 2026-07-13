@@ -11,7 +11,6 @@ import org.springframework.stereotype.Component;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Component
@@ -30,7 +29,7 @@ public class FarmaciaPublisher {
                     m.put("cantidadSolicitada", d.getCantidadSolicitada());
                     return m;
                 })
-                .collect(Collectors.toList());
+                .toList();
 
         Map<String, Object> payload = new HashMap<>();
         payload.put("solicitudId",   solicitud.getId());

@@ -1,5 +1,6 @@
 package com.galenospro.gateway.filter;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.galenospro.gateway.config.JwtValidatorConfig;
 import io.jsonwebtoken.Claims;
@@ -127,6 +128,24 @@ class JwtAuthenticationFilterTest {
 
         assertThat(exchange.getResponse().getStatusCode())
                 .isEqualTo(HttpStatus.UNAUTHORIZED);
+        verify(chain, never()).filter(any());
+    }
+
+    @Test
+    void deberia_usar_fallback_bytes_cuando_objectMapper_falla() throws Exception {
+        ObjectMapper failingMapper = mock(ObjectMapper.class);
+        when(failingMapper.writeValueAsBytes(any())).thenThrow(new JsonProcessingException("fail") {});
+
+        JwtAuthenticationFilter failFilter = new JwtAuthenticationFilter(jwtValidator, failingMapper);
+
+        MockServerHttpRequest request = MockServerHttpRequest
+                .get("/api/farmacia/solicitudes").build();
+        MockServerWebExchange exchange = MockServerWebExchange.from(request);
+
+        StepVerifier.create(failFilter.filter(exchange, chain))
+                .verifyComplete();
+
+        assertThat(exchange.getResponse().getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
         verify(chain, never()).filter(any());
     }
 }

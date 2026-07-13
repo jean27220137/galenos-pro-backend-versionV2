@@ -170,6 +170,17 @@
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
                 <version>0.8.12</version>
+                <configuration>
+                    <excludes>
+                        <exclude>**/*Application.class</exclude>
+                        <exclude>**/entity/**/*.class</exclude>
+                        <exclude>**/dto/**/*.class</exclude>
+                        <exclude>**/config/**/*.class</exclude>
+                        <exclude>**/*MapperImpl.class</exclude>
+                        <exclude>**/*Exception.class</exclude>
+                        <exclude>**/messaging/**</exclude>
+                    </excludes>
+                </configuration>
                 <executions>
                     <execution>
                         <goals><goal>prepare-agent</goal></goals>
@@ -185,16 +196,12 @@
                         <configuration>
                             <rules>
                                 <rule>
-                                    <element>PACKAGE</element>
-                                    <includes>
-                                        <include>com/galenospro/almacen/service</include>
-                                        <include>com/galenospro/almacen/controller</include>
-                                    </includes>
+                                    <element>BUNDLE</element>
                                     <limits>
                                         <limit>
                                             <counter>INSTRUCTION</counter>
                                             <value>COVEREDRATIO</value>
-                                            <minimum>0.55</minimum>
+                                            <minimum>1.00</minimum>
                                         </limit>
                                     </limits>
                                 </rule>

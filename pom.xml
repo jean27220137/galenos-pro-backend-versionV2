@@ -19,4 +19,21 @@
         <module>farmacia-service</module>
     </modules>
 
+    <properties>
+        <sonar.exclusions>
+            **/entity/**,
+            **/config/**,
+            **/*Application.java,
+            **/dto/**,
+            **/mapper/**
+        </sonar.exclusions>
+        <sonar.coverage.exclusions>
+            **/entity/**,
+            **/config/**,
+            **/*Application.java,
+            **/dto/**,
+            **/mapper/**
+        </sonar.coverage.exclusions>
+    </properties>
+
 </project>

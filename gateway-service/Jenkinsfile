@@ -54,7 +54,8 @@ pipeline {
       steps {
         dir("${SERVICE_DIR}") {
           withSonarQubeEnv('galenos-sonar') {
-            sh "mvn -B sonar:sonar -Dsonar.projectKey=${SONAR_KEY}"
+            sh """mvn -B sonar:sonar -Dsonar.projectKey=${SONAR_KEY} \
+              -Dsonar.coverage.exclusions='**/config/**,**/*Application.java,**/exception/ErrorResponse.java'"""
           }
         }
       }

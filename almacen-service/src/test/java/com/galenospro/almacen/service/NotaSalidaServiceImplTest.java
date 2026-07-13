@@ -188,4 +188,55 @@ class NotaSalidaServiceImplTest {
                     .hasMessageContaining("Timeout error");
         }
     }
+
+    @Test
+    void llamarPrDespacharSolicitud_exitoso_retorna_mapa() throws JsonProcessingException {
+        when(objectMapper.writeValueAsString(any())).thenReturn("[]");
+
+        try (MockedConstruction<SimpleJdbcCall> mocked = mockConstruction(
+                SimpleJdbcCall.class,
+                withSettings().defaultAnswer(Answers.RETURNS_SELF),
+                (mock, ctx) -> doReturn(Map.of("p_nota_id", 1L, "p_nro_nota", "NS-000001", "p_nro_movimiento", "MOV-001"))
+                        .when(mock).execute(any(Map.class)))) {
+            Map<String, Object> result = notaSalidaService.llamarPrDespacharSolicitud(dataSource, despachoDto);
+            assertThat(result).containsKey("p_nota_id");
+        }
+    }
+
+    @Test
+    void llamarPrConfirmarEntrega_exitoso_no_lanza_excepcion() {
+        try (MockedConstruction<SimpleJdbcCall> mocked = mockConstruction(
+                SimpleJdbcCall.class,
+                withSettings().defaultAnswer(Answers.RETURNS_SELF))) {
+            notaSalidaService.llamarPrConfirmarEntrega(dataSource, 1L);
+        }
+    }
+
+    @Test
+    void llamarPrDespacharSolicitud_excepcion_mensaje_nulo_relanza() throws JsonProcessingException {
+        when(objectMapper.writeValueAsString(any())).thenReturn("[]");
+
+        try (MockedConstruction<SimpleJdbcCall> mocked = mockConstruction(
+                SimpleJdbcCall.class,
+                withSettings().defaultAnswer(Answers.RETURNS_SELF),
+                (mock, ctx) -> doThrow(new RuntimeException((String) null))
+                        .when(mock).execute(any(Map.class)))) {
+            assertThatThrownBy(() ->
+                    notaSalidaService.llamarPrDespacharSolicitud(dataSource, despachoDto))
+                    .isInstanceOf(RuntimeException.class);
+        }
+    }
+
+    @Test
+    void llamarPrConfirmarEntrega_excepcion_mensaje_nulo_relanza() {
+        try (MockedConstruction<SimpleJdbcCall> mocked = mockConstruction(
+                SimpleJdbcCall.class,
+                withSettings().defaultAnswer(Answers.RETURNS_SELF),
+                (mock, ctx) -> doThrow(new RuntimeException((String) null))
+                        .when(mock).execute(any(Map.class)))) {
+            assertThatThrownBy(() ->
+                    notaSalidaService.llamarPrConfirmarEntrega(dataSource, 1L))
+                    .isInstanceOf(RuntimeException.class);
+        }
+    }
 }

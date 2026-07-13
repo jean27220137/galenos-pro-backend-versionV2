@@ -1,5 +1,6 @@
 package com.galenospro.gateway.filter;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -74,5 +75,45 @@ class RateLimitingFilterTest {
         assertThat(exchange.getResponse().getStatusCode())
                 .isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
         verify(chain, never()).filter(any());
+    }
+
+    @Test
+    void deberia_usar_userId_como_clave_cuando_header_presente() {
+        when(valueOps.increment(anyString())).thenReturn(Mono.just(1L));
+        when(redisTemplate.expire(anyString(), any())).thenReturn(Mono.just(true));
+
+        MockServerHttpRequest request = MockServerHttpRequest
+                .get("/api/farmacia/solicitudes")
+                .header("X-User-Id", "42")
+                .build();
+        MockServerWebExchange exchange = MockServerWebExchange.from(request);
+
+        StepVerifier.create(filter.filter(exchange, chain))
+                .verifyComplete();
+
+        verify(chain).filter(any());
+    }
+
+    @Test
+    void deberia_usar_fallback_bytes_cuando_objectMapper_falla() throws Exception {
+        ObjectMapper failingMapper = mock(ObjectMapper.class);
+        when(failingMapper.writeValueAsBytes(any())).thenThrow(new JsonProcessingException("fail") {});
+
+        RateLimitingFilter failFilter = new RateLimitingFilter(redisTemplate, failingMapper);
+        ReflectionTestUtils.setField(failFilter, "requestsPerMinute", 100);
+
+        when(valueOps.increment(anyString())).thenReturn(Mono.just(101L));
+
+        MockServerHttpRequest request = MockServerHttpRequest
+                .get("/api/farmacia/solicitudes")
+                .remoteAddress(new java.net.InetSocketAddress("127.0.0.1", 8080))
+                .build();
+        MockServerWebExchange exchange = MockServerWebExchange.from(request);
+
+        StepVerifier.create(failFilter.filter(exchange, chain))
+                .verifyComplete();
+
+        assertThat(exchange.getResponse().getStatusCode())
+                .isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
     }
 }

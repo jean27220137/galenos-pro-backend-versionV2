@@ -580,4 +580,91 @@ class SolicitudServiceImplTest {
                 .isInstanceOf(RuntimeException.class)
                 .hasMessage("Conexión fallida");
     }
+
+    // ── null-message branch tests ─────────────────────────────────────────────
+
+    @Test
+    void llamarPrCrearSolicitud_excepcion_mensaje_nulo_relanza() throws Exception {
+        when(objectMapper.writeValueAsString(any())).thenReturn("[]");
+
+        MockedConstruction.MockInitializer<SimpleJdbcCall> init =
+                (mock, ctx) -> when(mock.execute(anyMap()))
+                        .thenThrow(new RuntimeException((String) null));
+        try (MockedConstruction<SimpleJdbcCall> mocked =
+                     Mockito.mockConstruction(SimpleJdbcCall.class, returnsSelf(), init)) {
+            assertThatThrownBy(() -> solicitudService.llamarPrCrearSolicitud(dataSource, requestDto, 10L))
+                    .isInstanceOf(RuntimeException.class);
+        }
+    }
+
+    @Test
+    void marcarEnProceso_excepcion_mensaje_nulo_relanza() {
+        when(solicitudRepository.findById(1L)).thenReturn(Optional.of(solicitud));
+        SolicitudServiceImpl spyService = spy(solicitudService);
+        doThrow(new RuntimeException((String) null))
+                .when(spyService).llamarPrActualizarEstado(any(), anyLong(), any(), any(), any());
+
+        assertThatThrownBy(() -> spyService.marcarEnProceso(1L))
+                .isInstanceOf(RuntimeException.class);
+    }
+
+    @Test
+    void aprobar_excepcion_mensaje_nulo_relanza() {
+        when(solicitudRepository.findById(1L)).thenReturn(Optional.of(solicitud));
+        SolicitudServiceImpl spyService = spy(solicitudService);
+        doThrow(new RuntimeException((String) null))
+                .when(spyService).llamarPrActualizarEstado(any(), anyLong(), any(), any(), any());
+
+        assertThatThrownBy(() -> spyService.aprobar(1L))
+                .isInstanceOf(RuntimeException.class);
+    }
+
+    @Test
+    void cancelar_excepcion_mensaje_nulo_relanza() {
+        when(solicitudRepository.findById(1L)).thenReturn(Optional.of(solicitud));
+        SolicitudServiceImpl spyService = spy(solicitudService);
+        doThrow(new RuntimeException((String) null))
+                .when(spyService).llamarPrActualizarEstado(any(), anyLong(), any(), any(), any());
+
+        assertThatThrownBy(() -> spyService.cancelar(1L))
+                .isInstanceOf(RuntimeException.class);
+    }
+
+    @Test
+    void rechazar_excepcion_mensaje_nulo_relanza() {
+        when(solicitudRepository.findById(1L)).thenReturn(Optional.of(solicitud));
+        SolicitudServiceImpl spyService = spy(solicitudService);
+        doThrow(new RuntimeException((String) null))
+                .when(spyService).llamarPrActualizarEstado(any(), anyLong(), any(), any(), any());
+
+        assertThatThrownBy(() -> spyService.rechazar(1L, "motivo"))
+                .isInstanceOf(RuntimeException.class);
+    }
+
+    @Test
+    void confirmarEntrega_excepcion_mensaje_nulo_relanza() {
+        when(solicitudRepository.findById(1L)).thenReturn(Optional.of(solicitud));
+        SolicitudServiceImpl spyService = spy(solicitudService);
+        doThrow(new RuntimeException((String) null))
+                .when(spyService).llamarPrActualizarEstado(any(), anyLong(), any(), any(), any());
+
+        assertThatThrownBy(() -> spyService.confirmarEntrega(1L))
+                .isInstanceOf(RuntimeException.class);
+    }
+
+    @Test
+    void procesarDespachoConfirmado_excepcion_mensaje_nulo_relanza() {
+        Map<String, Object> payload = Map.of(
+                "solicitudId", 1L,
+                "notaId",      5L,
+                "nroNota",     "NS-000001",
+                "estado",      "GENERADA"
+        );
+        SolicitudServiceImpl spyService = spy(solicitudService);
+        doThrow(new RuntimeException((String) null))
+                .when(spyService).llamarPrActualizarEstado(any(), anyLong(), any(), any(), any());
+
+        assertThatThrownBy(() -> spyService.procesarDespachoConfirmado(payload))
+                .isInstanceOf(RuntimeException.class);
+    }
 }

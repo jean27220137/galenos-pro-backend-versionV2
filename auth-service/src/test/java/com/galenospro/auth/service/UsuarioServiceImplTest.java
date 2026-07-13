@@ -247,4 +247,85 @@ class UsuarioServiceImplTest {
                     .hasMessageContaining("Connection reset");
         }
     }
+
+    @Test
+    void llamarPrRegistrarUsuario_cargo_no_nulo_y_farmaciaId_nulo() {
+        when(passwordEncoder.encode(any())).thenReturn("hashed");
+        RegistrarUsuarioRequestDto dto = buildRegistrarDto();
+        dto.setCargo("Farmacéutico");
+        dto.setFarmaciaId(null);
+
+        try (MockedConstruction<SimpleJdbcCall> mocked = mockConstruction(
+                SimpleJdbcCall.class,
+                withSettings().defaultAnswer(Answers.RETURNS_SELF),
+                (mock, ctx) -> doReturn(Map.of("p_id", 5L)).when(mock).execute(any(Map.class)))) {
+            Long result = usuarioService.llamarPrRegistrarUsuario(dataSource, dto);
+            assertThat(result).isEqualTo(5L);
+        }
+    }
+
+    @Test
+    void llamarPrRegistrarUsuario_excepcion_mensaje_nulo_relanza() {
+        when(passwordEncoder.encode(any())).thenReturn("hashed");
+
+        try (MockedConstruction<SimpleJdbcCall> mocked = mockConstruction(
+                SimpleJdbcCall.class,
+                withSettings().defaultAnswer(Answers.RETURNS_SELF),
+                (mock, ctx) -> doThrow(new RuntimeException((String) null))
+                        .when(mock).execute(any(Map.class)))) {
+            assertThatThrownBy(() ->
+                    usuarioService.llamarPrRegistrarUsuario(dataSource, buildRegistrarDto()))
+                    .isInstanceOf(RuntimeException.class);
+        }
+    }
+
+    @Test
+    void llamarPrDesactivarUsuario_excepcion_mensaje_nulo_relanza() {
+        try (MockedConstruction<SimpleJdbcCall> mocked = mockConstruction(
+                SimpleJdbcCall.class,
+                withSettings().defaultAnswer(Answers.RETURNS_SELF),
+                (mock, ctx) -> doThrow(new RuntimeException((String) null))
+                        .when(mock).execute(any(Map.class)))) {
+            assertThatThrownBy(() ->
+                    usuarioService.llamarPrDesactivarUsuario(dataSource, 1L))
+                    .isInstanceOf(RuntimeException.class);
+        }
+    }
+
+    @Test
+    void actualizar_usuario_con_password_no_vacio_encripta_password() {
+        RegistrarUsuarioRequestDto dto = new RegistrarUsuarioRequestDto();
+        dto.setNombres("Ana"); dto.setApellidos("Torres");
+        dto.setEmail("ana@bernales.gob.pe"); dto.setRol("ADMIN");
+        dto.setPassword("nuevaClave123");
+
+        when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuario));
+        when(usuarioRepository.save(any(Usuario.class))).thenReturn(usuario);
+        when(usuarioMapper.toDto(usuario)).thenReturn(usuarioDto);
+        when(passwordEncoder.encode("nuevaClave123")).thenReturn("hashed_nueva");
+
+        UsuarioResponseDto resultado = usuarioService.actualizar(1L, dto);
+
+        assertThat(resultado).isNotNull();
+        verify(passwordEncoder).encode("nuevaClave123");
+        verify(usuarioRepository).save(any(Usuario.class));
+    }
+
+    @Test
+    void actualizar_usuario_con_password_vacio_no_encripta_password() {
+        RegistrarUsuarioRequestDto dto = new RegistrarUsuarioRequestDto();
+        dto.setNombres("Ana"); dto.setApellidos("Torres");
+        dto.setEmail("ana@bernales.gob.pe"); dto.setRol("ADMIN");
+        dto.setPassword("   ");
+
+        when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuario));
+        when(usuarioRepository.save(any(Usuario.class))).thenReturn(usuario);
+        when(usuarioMapper.toDto(usuario)).thenReturn(usuarioDto);
+
+        UsuarioResponseDto resultado = usuarioService.actualizar(1L, dto);
+
+        assertThat(resultado).isNotNull();
+        verify(passwordEncoder, never()).encode(any());
+        verify(usuarioRepository).save(any(Usuario.class));
+    }
 }

@@ -312,6 +312,22 @@ class SolicitudControllerTest {
                 .andExpect(status().isConflict());
     }
 
+    // ── POST crear — rama farmaciaId==null && farmaciaIdHeader==null ─────────
+
+    @Test
+    @WithMockUser(authorities = "FARMACEUTICO")
+    void POST_crear_farmaciaId_nulo_y_sin_header_no_asigna_farmaciaId() throws Exception {
+        SolicitudRequestDto req = buildRequest();
+        req.setFarmaciaId(null);
+        when(solicitudService.crear(any(), anyLong())).thenReturn(buildDto());
+
+        mockMvc.perform(post("/api/farmacia/solicitudes")
+                        .header("X-User-Id", "10")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isCreated());
+    }
+
     // ── PUT /cancelar ────────────────────────────────────────────────────────
 
     @Test
