@@ -208,7 +208,7 @@ class NotaSalidaServiceImplTest {
         try (MockedConstruction<SimpleJdbcCall> mocked = mockConstruction(
                 SimpleJdbcCall.class,
                 withSettings().defaultAnswer(Answers.RETURNS_SELF))) {
-            notaSalidaService.llamarPrConfirmarEntrega(dataSource, 1L);
+            assertThatNoException().isThrownBy(() -> notaSalidaService.llamarPrConfirmarEntrega(dataSource, 1L));
         }
     }
 

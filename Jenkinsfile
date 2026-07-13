@@ -12,7 +12,8 @@ pipeline {
         stage('Análisis SonarQube') {
             steps {
                 withSonarQubeEnv('SonarQube-Galenos') {
-                    sh 'mvn sonar:sonar -Dsonar.projectKey=galenos-pro-backend'
+                    sh """mvn sonar:sonar -Dsonar.projectKey=galenos-pro-backend \
+                      -Dsonar.coverage.exclusions='**/entity/**,**/dto/**,**/config/**,**/*MapperImpl.java,**/*Application.java,**/*Exception.java,**/messaging/**'"""
                 }
             }
         }

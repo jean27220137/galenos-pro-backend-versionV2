@@ -267,14 +267,14 @@ class UsuarioServiceImplTest {
     @Test
     void llamarPrRegistrarUsuario_excepcion_mensaje_nulo_relanza() {
         when(passwordEncoder.encode(any())).thenReturn("hashed");
+        RegistrarUsuarioRequestDto dto = buildRegistrarDto();
 
         try (MockedConstruction<SimpleJdbcCall> mocked = mockConstruction(
                 SimpleJdbcCall.class,
                 withSettings().defaultAnswer(Answers.RETURNS_SELF),
                 (mock, ctx) -> doThrow(new RuntimeException((String) null))
                         .when(mock).execute(any(Map.class)))) {
-            assertThatThrownBy(() ->
-                    usuarioService.llamarPrRegistrarUsuario(dataSource, buildRegistrarDto()))
+            assertThatThrownBy(() -> usuarioService.llamarPrRegistrarUsuario(dataSource, dto))
                     .isInstanceOf(RuntimeException.class);
         }
     }

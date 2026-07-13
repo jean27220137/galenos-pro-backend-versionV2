@@ -11,7 +11,6 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.*;
 
 class GlobalExceptionHandlerTest {
 
@@ -55,7 +54,7 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void handleValidacion_retorna_400_con_mensajes() throws Exception {
+    void handleValidacion_retorna_400_con_mensajes() {
         BeanPropertyBindingResult binding = new BeanPropertyBindingResult(new Object(), "solicitud");
         binding.addError(new FieldError("solicitud", "farmaciaId", "no debe ser nulo"));
         MethodArgumentNotValidException ex = new MethodArgumentNotValidException(null, binding);
