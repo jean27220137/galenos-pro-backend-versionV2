@@ -1,4 +1,4 @@
-// Pipeline auth-service — Galenos Pro v2
+// Pipeline auth-service — Galenos Pro v2 — test trigger
 pipeline {
   agent any
 
