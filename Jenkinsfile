@@ -29,3 +29,4 @@ pipeline {
         failure { echo 'Pipeline fallido — corregir antes de hacer push' }
     }
 }
+// test
